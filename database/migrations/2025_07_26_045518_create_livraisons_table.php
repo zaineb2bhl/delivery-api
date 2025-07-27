@@ -16,7 +16,7 @@ class CreateLivraisonsTable extends Migration
         Schema::create('livraisons', function (Blueprint $table) {
             $table->id();
             $table->foreignId('commande_id')->constrained('commandes')->onDelete('cascade');
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade'); // Le livreur
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade'); // Le livreur
             $table->enum('status', ['en_attente', 'assignee', 'en_cours', 'livree', 'annulee'])->default('en_attente');
             $table->timestamp('assigned_at')->nullable(); // Quand la livraison a été assignée
             $table->timestamp('started_at')->nullable(); // Quand le livreur a commencé

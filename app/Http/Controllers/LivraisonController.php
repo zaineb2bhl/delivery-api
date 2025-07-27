@@ -107,30 +107,42 @@ class LivraisonController extends Controller
         }
 
         $request->validate([
-            'status' => 'required|in:en_attente,assignee,en_cours,livree,annulee',
+            'action' => 'required|in:start,complete,cancel,update_notes',
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        $data = [
-            'status' => $request->status,
-            'notes' => $request->notes,
-        ];
+        switch ($request->action) {
+            case 'start':
+                if (!$livraison->canStart()) {
+                    return response()->json(['error' => 'La livraison ne peut pas être démarrée'], 400);
+                }
+                $livraison->startDelivery();
+                $message = 'Livraison démarrée avec succès.';
+                break;
 
-        // Mettre à jour les timestamps selon le statut
-        if ($request->status === 'en_cours' && $livraison->status !== 'en_cours') {
-            $data['started_at'] = now();
+            case 'complete':
+                if (!$livraison->canComplete()) {
+                    return response()->json(['error' => 'La livraison ne peut pas être terminée'], 400);
+                }
+                $livraison->completeDelivery();
+                $message = 'Livraison terminée avec succès.';
+                break;
+
+            case 'cancel':
+                $livraison->cancelDelivery();
+                $message = 'Livraison annulée avec succès.';
+                break;
+
+            case 'update_notes':
+                $livraison->update(['notes' => $request->notes]);
+                $message = 'Notes mises à jour avec succès.';
+                break;
         }
-
-        if ($request->status === 'livree' && $livraison->status !== 'livree') {
-            $data['delivered_at'] = now();
-        }
-
-        $livraison->update($data);
 
         $livraison->load(['commande.client', 'livreur']);
 
         return response()->json([
-            'message' => 'Livraison mise à jour avec succès.',
+            'message' => $message,
             'livraison' => $livraison
         ]);
     }

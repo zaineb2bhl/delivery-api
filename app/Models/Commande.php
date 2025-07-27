@@ -17,6 +17,10 @@ class Commande extends Model
         'date_livraison_souhaitee',
     ];
 
+    protected $dispatchesEvents = [
+        'created' => \App\Events\CommandeCreated::class,
+    ];
+
     // Relation avec le client (User)
     public function client()
     {

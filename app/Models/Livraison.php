@@ -62,4 +62,60 @@ class Livraison extends Model
     {
         return $query->where('status', 'annulee');
     }
+
+    /**
+     * Démarrer la livraison (changer statut à 'en_cours')
+     */
+    public function startDelivery()
+    {
+        $this->update([
+            'status' => 'en_cours',
+            'started_at' => now()
+        ]);
+    }
+
+    /**
+     * Terminer la livraison (changer statut à 'livree')
+     */
+    public function completeDelivery()
+    {
+        $this->update([
+            'status' => 'livree',
+            'delivered_at' => now()
+        ]);
+
+        // Libérer le livreur
+        if ($this->livreur) {
+            $this->livreur->update(['is_available' => true]);
+        }
+    }
+
+    /**
+     * Annuler la livraison
+     */
+    public function cancelDelivery()
+    {
+        $this->update(['status' => 'annulee']);
+
+        // Libérer le livreur si assigné
+        if ($this->livreur && $this->status !== 'en_attente') {
+            $this->livreur->update(['is_available' => true]);
+        }
+    }
+
+    /**
+     * Vérifier si la livraison peut être démarrée
+     */
+    public function canStart()
+    {
+        return $this->status === 'assignee' && $this->user_id !== null;
+    }
+
+    /**
+     * Vérifier si la livraison peut être terminée
+     */
+    public function canComplete()
+    {
+        return $this->status === 'en_cours';
+    }
 }
