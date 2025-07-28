@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Events\CommandeCreated;
 use App\Models\Livraison;
 use App\Models\User;
+use App\Services\FCMService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 
@@ -53,6 +54,10 @@ class AutoAssignLivraison
             
             // Marquer le livreur comme non disponible temporairement
             $livreurDisponible->update(['is_available' => false]);
+            
+            // Envoyer notification au client
+            $fcmService = new FCMService();
+            $fcmService->sendLivraisonStatusNotification($livraison, 'assignee');
         }
         
         // Log pour debug

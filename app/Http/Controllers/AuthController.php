@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\LoginHistory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -51,11 +52,15 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
+            'fcm_token' => 'nullable|string', // Token FCM optionnel
         ]);
 
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            // Enregistrer la tentative de connexion échouée
+            LoginHistory::logFailedLogin($request->email, 'Identifiants incorrects', $request);
+            
             throw ValidationException::withMessages([
                 'email' => ['Identifiants incorrects.'],
             ]);
@@ -63,6 +68,14 @@ class AuthController extends Controller
 
         // Supprimer les anciens tokens (optionnel)
         $user->tokens()->delete();
+
+        // Mettre à jour le token FCM si fourni
+        if ($request->fcm_token) {
+            $user->update(['fcm_token' => $request->fcm_token]);
+        }
+
+        // Enregistrer la connexion réussie
+        LoginHistory::logSuccessfulLogin($user->id, $request);
 
         // Créer un nouveau token
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -81,7 +94,19 @@ class AuthController extends Controller
     // Déconnexion
     public function logout(Request $request)
     {
-        $request->user()->tokens()->delete();
+        $user = $request->user();
+        
+        // Enregistrer la déconnexion
+        $lastLogin = $user->loginHistories()
+            ->whereNull('logout_at')
+            ->latest()
+            ->first();
+            
+        if ($lastLogin) {
+            $lastLogin->logLogout();
+        }
+
+        $user->tokens()->delete();
 
         return response()->json([
             'message' => 'Déconnecté avec succès.'
@@ -95,6 +120,22 @@ class AuthController extends Controller
         $user->load('role');
 
         return response()->json([
+            'user' => $user
+        ]);
+    }
+
+    // Mettre à jour le token FCM
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'fcm_token' => 'required|string'
+        ]);
+
+        $user = $request->user();
+        $user->update(['fcm_token' => $request->fcm_token]);
+
+        return response()->json([
+            'message' => 'Token FCM mis à jour avec succès.',
             'user' => $user
         ]);
     }

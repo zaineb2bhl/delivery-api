@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Livraison;
 use App\Models\Commande;
 use App\Models\User;
+use App\Services\FCMService;
 use Illuminate\Http\Request;
 
 class LivraisonController extends Controller
@@ -111,12 +112,18 @@ class LivraisonController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
+        $fcmService = new FCMService();
+
         switch ($request->action) {
             case 'start':
                 if (!$livraison->canStart()) {
                     return response()->json(['error' => 'La livraison ne peut pas être démarrée'], 400);
                 }
                 $livraison->startDelivery();
+                
+                // Envoyer notification au client
+                $fcmService->sendLivraisonStatusNotification($livraison, 'en_cours');
+                
                 $message = 'Livraison démarrée avec succès.';
                 break;
 
@@ -125,11 +132,19 @@ class LivraisonController extends Controller
                     return response()->json(['error' => 'La livraison ne peut pas être terminée'], 400);
                 }
                 $livraison->completeDelivery();
+                
+                // Envoyer notification au client
+                $fcmService->sendLivraisonStatusNotification($livraison, 'livree');
+                
                 $message = 'Livraison terminée avec succès.';
                 break;
 
             case 'cancel':
                 $livraison->cancelDelivery();
+                
+                // Envoyer notification au client
+                $fcmService->sendLivraisonStatusNotification($livraison, 'annulee');
+                
                 $message = 'Livraison annulée avec succès.';
                 break;
 

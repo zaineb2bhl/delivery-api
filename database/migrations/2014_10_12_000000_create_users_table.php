@@ -21,6 +21,7 @@ class CreateUsersTable extends Migration
             $table->string('password');
             $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
             $table->boolean('is_available')->default(true);
+            $table->string('fcm_token')->nullable(); // Token FCM pour les notifications
             $table->rememberToken();
             $table->timestamps();
         });

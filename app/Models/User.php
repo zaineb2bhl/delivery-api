@@ -21,6 +21,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'is_available',
+        'fcm_token',
     ];
 
     /**
@@ -84,5 +85,21 @@ class User extends Authenticatable
     public function livraisons()
     {
         return $this->hasMany(Livraison::class, 'user_id');
+    }
+
+    /**
+     * Relation avec les notifications (pour tous les utilisateurs)
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Relation avec l'historique des connexions
+     */
+    public function loginHistories()
+    {
+        return $this->hasMany(LoginHistory::class);
     }
 }
